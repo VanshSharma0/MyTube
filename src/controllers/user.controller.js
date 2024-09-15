@@ -110,29 +110,36 @@ const loginUser = asyncHandler( async(req,res) => {
     .json(new ApiResponse(200, {user: loggedInUser, accessToken, refreshToken}, "User logged in successfully"))
 })
 
-const logoutUser = asyncHandler(async(req, res) => {
-    await User.findByIdAndUpdate(
-        req.user._id,
-        {
-            $unset: {
-                refreshToken: 1 // this removes the field from document
-            }
-        },
-        {
-            new: true
-        }
-    )
-
-    const options = {
-        httpOnly: true,
-        secure: true
+const logoutUser = asyncHandler(async (req, res) => {
+    // Ensure the user exists in the request (user might already be logged out or invalid)
+    if (!req.user || !req.user._id) {
+      return res
+        .status(400)
+        .json(new ApiResponse(400, {}, "User not logged in or invalid request"));
     }
-
+  
+    // Remove the refresh token from the user document
+    await User.findByIdAndUpdate(
+      req.user._id,
+      {
+        $unset: { refreshToken: 1 } // This removes the refreshToken field from the document
+      },
+      { new: true }
+    );
+  
+    // Define cookie options
+    const cookieOptions = {
+      httpOnly: true,
+      secure: true, // Only transmit cookie over HTTPS
+      sameSite: "Lax", // Adjust depending on the security requirements (Strict or None)
+    };
+  
+    // Clear the accessToken and refreshToken cookies and return response
     return res
-    .status(200)
-    .clearCookie("accessToken", options)
-    .clearCookie("refreshToken", options)
-    .json(new ApiResponse(200, {}, "User logged Out"))
-})
+      .status(200)
+      .clearCookie("accessToken", cookieOptions) // Clear accessToken cookie
+      .clearCookie("refreshToken", cookieOptions) // Clear refreshToken cookie
+      .json(new ApiResponse(200, {}, "User logged out successfully"));
+});
 
 export { registerUser, loginUser, logoutUser }
