@@ -56,6 +56,16 @@ userSchema.pre("save", async function (next) {
 })
 
 userSchema.methods.isPasswordCorrect = async function (password) {
+    console.log('Received password type:', typeof password);
+    console.log('Stored password type:', typeof this.password);
+    
+    if (typeof password !== 'string') {
+        throw new Error('Provided password is not a string');
+    }
+    if (typeof this.password !== 'string') {
+        throw new Error('Stored password is not a string');
+    }
+    
     return await bcrypt.compare(password, this.password);
 }
 

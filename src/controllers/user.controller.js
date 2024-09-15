@@ -3,6 +3,9 @@ import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
 import {uploadOnCloudinary} from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import jwt from "jsonwebtoken"
+import mongoose from "mongoose";
+
 
 const generateAccessAndRefreshTokens = async (userId) => {
     try {
@@ -70,12 +73,6 @@ const registerUser = asyncHandler( async(req,res) => {
 } )
 
 const loginUser = asyncHandler( async(req,res) => {
-    // req.body -> data
-    // check credentials validity and return token
-    // generate token
-    // return token
-    // if already logged in, return token
-    // else, login
 
     const {email, username, password} = req.body;
 
@@ -113,15 +110,19 @@ const loginUser = asyncHandler( async(req,res) => {
     .json(new ApiResponse(200, {user: loggedInUser, accessToken, refreshToken}, "User logged in successfully"))
 })
 
-const logoutUser = asyncHandler(async(req,res) => {
+const logoutUser = asyncHandler(async(req, res) => {
     await User.findByIdAndUpdate(
         req.user._id,
         {
-            $set: {refreshToken: undefined}
+            $unset: {
+                refreshToken: 1 // this removes the field from document
+            }
         },
-    {
-        new: true
-    })
+        {
+            new: true
+        }
+    )
+
     const options = {
         httpOnly: true,
         secure: true
@@ -131,7 +132,7 @@ const logoutUser = asyncHandler(async(req,res) => {
     .status(200)
     .clearCookie("accessToken", options)
     .clearCookie("refreshToken", options)
-    .json(new ApiResponse(200, {}, "User logged out successfully"))
+    .json(new ApiResponse(200, {}, "User logged Out"))
 })
 
 export { registerUser, loginUser, logoutUser }
